@@ -1,6 +1,6 @@
 'use strict';
 
-// Last time updated: 2022-04-05 11:18:05 AM UTC
+// Last time updated: 2022-09-06 6:20:52 PM UTC
 
 // ________________
 // RecordRTC v5.6.2
@@ -5373,21 +5373,28 @@ function MultiStreamsMixer(arrayOfMediaStreams, elementClass) {
         resetVideoStreams(streams);
     };
 
+    // RecordRTC had some issues with updating audio streams
+    // after recorder has been started.
+    // This change will fix that issue.
     function resetVideoStreams(streams) {
         videos = [];
         streams = streams || arrayOfMediaStreams;
-
-        // via: @adrian-ber
         streams.forEach(function(stream) {
-            if (!stream.getTracks().filter(function(t) {
+            if (stream.getTracks().filter(function(t) {
                     return t.kind === 'video';
                 }).length) {
-                return;
+                var video = getVideo(stream);
+                video.stream = stream;
+                videos.push(video);
             }
 
-            var video = getVideo(stream);
-            video.stream = stream;
-            videos.push(video);
+            if (stream.getTracks().filter(function(t) {
+                    return t.kind === 'audio';
+                }).length && self.audioContext) {
+                var audioSource = self.audioContext.createMediaStreamSource(stream);
+                audioSource.connect(self.audioDestination);
+                self.audioSources.push(audioSource);
+            }
         });
     }
 
